@@ -6,15 +6,13 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.util.Base64;
 
 public class Request implements Serializable,Cloneable {
     private String Name;
     private boolean IsEdited;
-
+    private String Text;
     public Request(String name, boolean isEdited, String text) {
         Name = name;
         IsEdited = isEdited;
@@ -45,12 +43,20 @@ public class Request implements Serializable,Cloneable {
         Text = text;
     }
 
-    private String Text;
-    private static final String key = "aesEncryptionKey";
-    private static final String initVector = "encryptionIntVec";
+
+    private String key = "aesEncryptionKey";
+    private String initVector = "encryptionIntVec";
 
 
-    private static String encrypt(String data) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    private String encrypt(String data) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
 
         IvParameterSpec iv = new IvParameterSpec(initVector.getBytes());
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
@@ -61,13 +67,14 @@ public class Request implements Serializable,Cloneable {
         byte[] encrypted = cipher.doFinal(data.getBytes());
 
         String s = Base64.getEncoder().encodeToString(encrypted);
-        System.out.println(s);
         return s;
     }
 
 
 
-    private static String decrypt(String data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+
+    private String decrypt(String data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException
+    {
 
         byte[] encrypted = Base64.getDecoder().decode(data);
 
@@ -82,6 +89,23 @@ public class Request implements Serializable,Cloneable {
         String s = new String(decrypted, StandardCharsets.UTF_8);
 
         return s;
+    }
+    public void siphor(){
+        try {
+            this.Name = encrypt(this.Name);
+            this.Text = encrypt(this.Text);
+        } catch (Exception e){
+            System.out.print((""));
+        }
+    }
+    public void unSiphor(){
+        try {
+            this.Name = decrypt(this.Name);
+            this.Text = decrypt(this.Text);
+        }
+        catch (Exception e) {
+            System.out.print((""));
+        }
     }
     @Override
     public String toString(){

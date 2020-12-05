@@ -4,13 +4,14 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
-public class Response {
+public class Response implements Serializable {
     private String Text;
     private String Message;
 
@@ -19,8 +20,8 @@ public class Response {
         Message = message;
     }
 
-    private static final String key = "aesEncryptionKey";
-    private static final String initVector = "encryptionIntVec";
+    private String key = "aesEncryptionKey";
+    private String initVector = "encryptionIntVec";
 
     public String getText() {
         return Text;
@@ -37,24 +38,29 @@ public class Response {
     public void setMessage(String message) {
         Message = message;
     }
-    private static String encrypt(String data) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+    private String encrypt(String data) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
 
         IvParameterSpec iv = new IvParameterSpec(initVector.getBytes());
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-        cipher.init(Cipher.ENCRYPT_MODE, skeySpec, iv); // or Cipher.DECRYPT_MODE
+        cipher.init(Cipher.ENCRYPT_MODE, skeySpec,iv); // or Cipher.DECRYPT_MODE
 
         byte[] encrypted = cipher.doFinal(data.getBytes());
 
         String s = Base64.getEncoder().encodeToString(encrypted);
-        System.out.println(s);
         return s;
     }
 
+    public String getKey() {
+        return key;
+    }
 
+    public void setKey(String key) {
+        this.key = key;
+    }
 
-    private static String decrypt(String data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    private String decrypt(String data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
         byte[] encrypted = Base64.getDecoder().decode(data);
 
@@ -62,13 +68,32 @@ public class Response {
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-        cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv);
+        cipher.init(Cipher.DECRYPT_MODE, skeySpec,iv);
 
         byte[] decrypted = cipher.doFinal(encrypted);
 
         String s = new String(decrypted, StandardCharsets.UTF_8);
 
         return s;
+    }
+    public void siphor(){
+        try {
+            this.Message = encrypt(this.Message);
+            this.Text = encrypt(this.Text);
+        } catch (Exception e){
+            System.out.print((""));
+        }
+    }
+    public void unSiphor()
+    {
+        try
+        {
+            this.Message = decrypt(this.Message);
+            this.Text = decrypt(this.Text);
+        }
+        catch (Exception e) {
+            System.out.print((""));
+        }
     }
     @Override
     public String toString(){
