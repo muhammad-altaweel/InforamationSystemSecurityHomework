@@ -9,10 +9,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Base64;
 
-public class Request implements Serializable,Cloneable {
+public class Request implements Serializable {
     private String Name;
     private boolean IsEdited;
     private String Text;
+
+
     public Request(String name, boolean isEdited, String text) {
         Name = name;
         IsEdited = isEdited;
@@ -43,20 +45,7 @@ public class Request implements Serializable,Cloneable {
         Text = text;
     }
 
-
-    private String key = "aesEncryptionKey";
-    private String initVector = "encryptionIntVec";
-
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    private String encrypt(String data) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+    private String encrypt(String data,String initVector,String key) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
 
         IvParameterSpec iv = new IvParameterSpec(initVector.getBytes());
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
@@ -73,7 +62,7 @@ public class Request implements Serializable,Cloneable {
 
 
 
-    private String decrypt(String data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException
+    private String decrypt(String data,String initVector,String key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException
     {
 
         byte[] encrypted = Base64.getDecoder().decode(data);
@@ -90,21 +79,21 @@ public class Request implements Serializable,Cloneable {
 
         return s;
     }
-    public void siphor(){
+    public void siphor(String initVector,String key){
         try {
-            this.Name = encrypt(this.Name);
-            this.Text = encrypt(this.Text);
+            this.Name = encrypt(this.Name,initVector,key);
+            this.Text = encrypt(this.Text,initVector,key);
         } catch (Exception e){
-            System.out.print((""));
+            System.out.println(e);
         }
     }
-    public void unSiphor(){
+    public void unSiphor(String initVector,String key){
         try {
-            this.Name = decrypt(this.Name);
-            this.Text = decrypt(this.Text);
+            this.Name = decrypt(this.Name,initVector,key);
+            this.Text = decrypt(this.Text,initVector,key);
         }
         catch (Exception e) {
-            System.out.print((""));
+            System.out.println(e);
         }
     }
     @Override

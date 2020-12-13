@@ -4,20 +4,21 @@ import javax.crypto.SecretKey;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.util.Base64;
 import java.util.Scanner;
 
 public class Client {
     public static void main(String args[]) throws Exception {
+
+        //Generate Public and Private Keys for Client
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(2048);
         KeyPair pair = keyPairGenerator.generateKeyPair();
         PrivateKey clientPrivateKey = pair.getPrivate();
         PublicKey clientPublicKey = pair.getPublic();
+
+
         int k = 0;
             try {
                 Socket socket = new Socket("localhost", 11111);
@@ -27,18 +28,32 @@ public class Client {
                 objectOutputStream.writeObject(clientPublicKey);
                 InputStream inputStream = socket.getInputStream();
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-                //recieve public key from server
+                //Receive public key from server
                 PublicKey serverPublicKey = (PublicKey)objectInputStream.readObject();
+                //Generate A signature Object and a SignedObject
+                Signature sig = Signature.getInstance("SHA256withRSA");
                 //generate session Id
                 SecretKey secretKey = KeyGenerator.getInstance("AES").generateKey();
-                String SessionId = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-                //encrypt it with server public key and send it back to server
-                objectOutputStream.writeObject(encrypt(SessionId,serverPublicKey));
-                //Recieve confirmation from server
-                String confirmation = (String)objectInputStream.readObject();
-                System.out.println("Session Id:"+SessionId);
-                System.out.println("confimation:"+decrypt(confirmation,clientPrivateKey));
+                String SessionId = Base64.getEncoder().encodeToString(secretKey.getEncoded()).substring(0,16);
+                //encrypt it with server public key
+                String encryptedSession = encrypt(SessionId,serverPublicKey);
+                //Create a signedObject object to hold the encrypted Session Id
+                SignedObject signedSession = new SignedObject(encryptedSession,clientPrivateKey,sig);
+                // and send it back to server
+                objectOutputStream.writeObject( signedSession );
+
+                //Receive confirmation from server
+                SignedObject signedConfirmation = (SignedObject)objectInputStream.readObject();
+                boolean isConfirmationRight = signedConfirmation.verify(serverPublicKey,sig);
+                String confirmation = (String)signedConfirmation.getObject();
+                System.out.println("Session Id:" + SessionId);
+                System.out.println("confirmation:" + decrypt(confirmation,clientPrivateKey));
+
                 while (k != 2){
+                    //generate initialize vector and send it to server
+                    String initVector = generateInitVector(SessionId.length());
+                    String encInitVector = encrypt(initVector,serverPublicKey);
+                    objectOutputStream.writeObject(encInitVector);
                     //  Create the request
                     Scanner scanner = new Scanner(System.in);
                     System.out.println("Please Enter A new Request :");
@@ -52,16 +67,18 @@ public class Client {
                         text = scanner.nextLine();
                     }
                     Request request = new Request(name, isEdited, text);
-                    request.setKey(SessionId);
                     //encrypt the request
-                    request.siphor();
-                    //send the request
-                    objectOutputStream.writeObject(request);
-                    //Recieve the response
-                    Response response = (Response) objectInputStream.readObject();
-                    response.setKey(SessionId);
+                    request.siphor(initVector,SessionId);
+                    SignedObject signedRequest = new SignedObject(request,clientPrivateKey, sig);
+                    //send the signed object
+                    objectOutputStream.writeObject(signedRequest);
+                    //Receive the signed Response
+                    SignedObject signedResponse = (SignedObject) objectInputStream.readObject();
+                    //Verify the Response
+                    boolean b = signedRequest.verify(serverPublicKey, sig);
+                    Response response = (Response) signedResponse.getObject();
                     //Decrypt the response
-                    response.unSiphor();
+                    response.unSiphor(initVector,SessionId);
                     System.out.println(response.getMessage());
                     if (response.getMessage().equals("file founded"))
                     {
@@ -73,7 +90,7 @@ public class Client {
                 }
                 socket.close();
             } catch (Exception e) {
-                System.out.println(e.getCause());
+                System.out.println(e);
             }
     }
     public static String encrypt(String string , PublicKey publicKey) throws Exception {
@@ -106,8 +123,32 @@ public class Client {
             byte[] decipheredText = cipher.doFinal(encrypted);
             return new String(decipheredText, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            System.out.println(e.getCause());
+            System.out.println(e);
         }
         return "";
+    }
+    private static String generateInitVector(int n)
+    {
+
+        // chose a Character random from this String
+        String AlphaNumericString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                + "0123456789"
+                + "abcdefghijklmnopqrstuvxyz";
+
+        // create StringBuffer size of AlphaNumericString
+        StringBuilder sb = new StringBuilder(n);
+
+        for (int i = 0; i < n; i++) {
+
+            int index
+                    = (int)(AlphaNumericString.length()
+                    * Math.random());
+
+            // add Character one by one in end of sb
+            sb.append(AlphaNumericString
+                    .charAt(index));
+        }
+
+        return sb.toString();
     }
     }

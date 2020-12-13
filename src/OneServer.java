@@ -1,9 +1,12 @@
 import javax.crypto.Cipher;
+import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignedObject;
 import java.util.Base64;
 
 public class OneServer implements Runnable {
@@ -34,28 +37,39 @@ public class OneServer implements Runnable {
                 String to_return;
                 to_return = "";
                 String SessionId;
-                // Recive public from client
+                Signature sig = Signature.getInstance("SHA256withRSA");
+                // Receive public from client
                 InputStream inputStream = socket.getInputStream();
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
                 PublicKey clientPublicKey = (PublicKey) objectInputStream.readObject();
-                //send public to client
+                //Send public to client
                 OutputStream outputStream = socket.getOutputStream();
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
                 objectOutputStream.writeObject(serverPublicKey);
-                //Recieve session ID from client
-                SessionId = (String) objectInputStream.readObject();
+                //Receive session ID from client
+                SignedObject signedSession = (SignedObject) objectInputStream.readObject();
+                SessionId = (String) signedSession.getObject();
                 //Decrypt it with private
-                SessionId = decrypt(SessionId, serverPrivateKey);
-                //send confirmation to client
+                SessionId = decrypt(SessionId , serverPrivateKey);
+                //Send confirmation to client
                 String res = encrypt("ok", clientPublicKey);
-                objectOutputStream.writeObject(res);
+                //pack it with signedObject
+                SignedObject signedConfirmation = new SignedObject(res,serverPrivateKey,sig);
+                objectOutputStream.writeObject(signedConfirmation);
                 //Recieve Requests from client
                 while(true) {
                     to_return="";
                     message = "";
-                    Request request = (Request) objectInputStream.readObject();
-                    request.setKey(SessionId);
-                    request.unSiphor();
+                    //Receive initVector from client:
+                    String initVector = (String) objectInputStream.readObject();
+                    initVector = decrypt(initVector,serverPrivateKey);
+                    //Receive the signedRequest from client
+                    SignedObject signedRequest = (SignedObject) objectInputStream.readObject();
+                    // Verify the signed Request
+                    boolean b = signedRequest.verify(clientPublicKey, sig);
+                    Request request =(Request) signedRequest.getObject() ;
+                    //decrypt the encrypted Request
+                    request.unSiphor(initVector,SessionId);
                     String name = request.getName();
                     boolean isEdited = request.isEdited();
                     String text = request.getText();
@@ -69,7 +83,7 @@ public class OneServer implements Runnable {
                             to_return = text;
                             printWriter.close();
                         } catch (Exception e) {
-                            System.out.println(e.getCause());
+                            System.out.println(e);
                         }
                     } else { // read the file text and return it to
                         if (find_file(name)) {
@@ -84,14 +98,17 @@ public class OneServer implements Runnable {
                             message = "file does not existed";
                         }
                     }
+                    //create the Response
                     Response response = new Response(to_return, message);
-                    response.setKey(SessionId);
-                    response.siphor();
-                    //ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-                    objectOutputStream.writeObject(response);
+                    //encrypt the Response
+                    response.siphor(initVector,SessionId);
+                    //sign the Response
+                    SignedObject signedResponse = new SignedObject(response,serverPrivateKey,sig);
+                    //send the signed Response to client
+                    objectOutputStream.writeObject(signedResponse);
                 }
             } catch (Exception e) {
-                System.out.println(e.getCause());
+                System.out.println(e);
             }
 
 
@@ -126,8 +143,9 @@ public class OneServer implements Runnable {
             byte[] decipheredText = cipher.doFinal(encrypted);
             return new String(decipheredText, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            System.out.println(e.getCause());
+            System.out.println(e);
         }
         return "";
     }
+
 }
