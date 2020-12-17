@@ -41,13 +41,13 @@ public class CSRGenerator {
 //          pkcs10.encodeAndSign(new X500Signer(sig, x500Name));   // For Java 6
             pkcs10.encodeAndSign(x500Name, sig);                   // For Java 7 and Java 8
             pkcs10.print(printStream);
-
             byte[] csrBytes = outStream.toByteArray();
-
             return csrBytes;
-        } catch (Exception ex) {
+        } catch (Exception ex)
+        {
             ex.printStackTrace();
-        } finally {
+        } finally
+        {
             if(null != outStream) {
                 try {
                     outStream.close();
