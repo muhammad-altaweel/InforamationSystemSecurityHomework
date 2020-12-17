@@ -6,7 +6,7 @@ public class CSR implements Serializable {
     private PublicKey publicKey;
 
     public CSR(String name, PublicKey publicKey) {
-        Name = name;
+        this.Name = name;
         this.publicKey = publicKey;
     }
 

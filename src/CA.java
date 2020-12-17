@@ -17,6 +17,7 @@ public class CA {
     private static String ValidityFileName="theFile.txt";
     public static void main(String args[]) throws Exception
     {
+        //Generate public and private keys for CA
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(2048);
         KeyPair pair = keyPairGenerator.generateKeyPair();
@@ -48,12 +49,13 @@ public class CA {
                     //verify the signedSecretMessage
                     String RecievedSecretMessage = (String) signedSecretMessage.getObject();
                     if(signedSecretMessage.verify(csrRequest.getPublicKey(),sig) && secretMessage.equals(RecievedSecretMessage))
-                    {
+                    {   //The CSR was verified succefully
                         System.out.println("The request from "+csrRequest.getName()+" Was Verified");
                         //Create the Certificate ,Sign it and send it to the client
                         X509Certificate certificate = generateCertificate(csrRequest,CAPrivateKey);
                         objectOutputStream.writeObject(certificate);
                         String Name = certificate.getIssuerDN().getName().substring(3);
+                        certificates.add(certificate);
                         System.out.println("Certificate to "+Name + " Was given");
                     }
                     else{

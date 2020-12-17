@@ -34,6 +34,7 @@ public class Client {
             //send CSR to CA
             CSR serverCsr = new CSR(clientName,clientPublicKey);
             objectOutputStream.writeObject(serverCsr);
+            //Receive file directry  which contain secret message for verifying the CSR
             String filepath = (String) objectInputStream.readObject();
             String secretMessage="";
             //read the secret Message
@@ -43,14 +44,14 @@ public class Client {
             while ((st = br.readLine()) != null)
                 secretMessage += st;
             br.close();
-            //sign the secret Message and send it to CA
+            //sign the secret Message with private and send it to CA
             Signature sig = Signature.getInstance("SHA256withRSA");
             SignedObject signedSecretMessage = new SignedObject(secretMessage,clientPrivateKey,sig);
             objectOutputStream.writeObject(signedSecretMessage);
             //Receive the clientCertificate from CA
             clientCertificate = (X509Certificate)objectInputStream.readObject();
             if(Verify(clientCertificate,CaPublicKey)){
-                System.out.println("Certificate Received and Verified successfully");
+                System.out.println("Certificate Received and Verified successfully\n");
             }
             else{
                 System.out.println("Certificate was not received or did not verified successfully");
@@ -64,7 +65,7 @@ public class Client {
         }
 
         int k = 0;
-            try {
+            try {//connect with the server
                 Socket socket = new Socket("localhost", 11111);
                 OutputStream outputStream = socket.getOutputStream();
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
@@ -82,7 +83,6 @@ public class Client {
                 //Verify Server Certificate and server Name
                 if (Verify(serverCertificate, CaPublicKey) && serverName.equals(serverCertificate.getIssuerDN().getName().substring(3))) {
                     System.out.println("Server Certificate Was Verified");
-
                     //Generate A signature Object and a SignedObject
                     Signature sig = Signature.getInstance("SHA256withRSA");
                     //generate session Id
@@ -113,7 +113,7 @@ public class Client {
                         System.out.println("---------------------------");
                         System.out.println("Enter the name of the file:");
                         String name = scanner.nextLine() + ".txt";
-                        System.out.println("\nEnter yes if you want to modify/create the file:");
+                        System.out.println("\nEnter yes if you want to modify/create the file OR no just read it:");
                         boolean isEdited = scanner.nextLine().equals("yes");
                         String text = "";
                         if (isEdited) {
@@ -138,7 +138,7 @@ public class Client {
                             System.out.println("\nfile content ::::");
                             System.out.println(response.getText() + "\n");
                         }
-                        System.out.println("enter close if you want to close the connection");
+                        System.out.println("Enter close if you want to close the connection or something else to continue:");
                         k = scanner.nextLine().equals("close") ? 2 : 1;
                     }
                     socket.close();
@@ -181,8 +181,7 @@ public class Client {
         }
         return "";
     }
-    private static String generateInitVector(int n)
-    {
+    private static String generateInitVector(int n) {
 
         // chose a Character random from this String
         String AlphaNumericString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
