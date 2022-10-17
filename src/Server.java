@@ -14,7 +14,7 @@ public class Server {
         KeyPair pair = keyPairGenerator.generateKeyPair();
         PrivateKey serverPrivateKey = pair.getPrivate();
         PublicKey serverPublicKey = pair.getPublic();
-        PublicKey CaPublicKey ;
+        PublicKey CaPublicKey;
         X509Certificate serverCertificate;
         String serverName = "Main-Server";
         //1.Connect with CA to Get serverCertificate 2.Generate Csr and send it to CA 3.Receive Certificate from CA
@@ -27,10 +27,10 @@ public class Server {
             //Receive CA public key
             CaPublicKey = (PublicKey) objectInputStream.readObject();
             //send CSR to CA
-            CSR serverCsr = new CSR(serverName,serverPublicKey);
+            CSR serverCsr = new CSR(serverName, serverPublicKey);
             objectOutputStream.writeObject(serverCsr);
             String filepath = (String) objectInputStream.readObject();
-            String secretMessage="";
+            String secretMessage = "";
             //read the secret Message
             File file = new File(filepath);
             BufferedReader br = new BufferedReader(new FileReader(file));
@@ -40,34 +40,32 @@ public class Server {
             br.close();
             //sign the secret Message and send it to CA
             Signature sig = Signature.getInstance("SHA256withRSA");
-            SignedObject signedSecretMessage = new SignedObject(secretMessage,serverPrivateKey,sig);
+            SignedObject signedSecretMessage = new SignedObject(secretMessage, serverPrivateKey, sig);
             objectOutputStream.writeObject(signedSecretMessage);
             //Receive the serverCertificate from CA
-            serverCertificate = (X509Certificate)objectInputStream.readObject();
-            if(Verify(serverCertificate,CaPublicKey)){
+            serverCertificate = (X509Certificate) objectInputStream.readObject();
+            if (Verify(serverCertificate, CaPublicKey)) {
                 System.out.println("Certificate Received and Verified successfully");
-            }
-            else{
+            } else {
                 System.out.println("Certificate was not received or did not verified successfully");
             }
             socket.close();
             //System.out.println(serverCertificate);
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             System.out.println("Could not connect with Certificate Authority");
-            return ;
+            return;
         }
         try (ServerSocket listener = new ServerSocket(11111)) {
             System.out.println("The Main server is running...");
             ExecutorService pool = Executors.newFixedThreadPool(20);
-            while (true)
-            {
-                pool.execute(new OneServer(listener.accept(),serverPublicKey,serverPrivateKey,serverCertificate,CaPublicKey));
+            while (true) {
+                pool.execute(new OneServer(listener.accept(), serverPublicKey, serverPrivateKey, serverCertificate, CaPublicKey));
             }
         }
     }
+
     //check if the certificate is correct compatible with a certain public key
-    public static boolean Verify(X509Certificate certificate,PublicKey publicKey) {
+    public static boolean Verify(X509Certificate certificate, PublicKey publicKey) {
         try {
             certificate.verify(publicKey);
             return true;

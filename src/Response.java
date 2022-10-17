@@ -36,13 +36,14 @@ public class Response implements Serializable {
     public void setMessage(String message) {
         Message = message;
     }
-    private String encrypt(String data,String initVector,String key) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+
+    private String encrypt(String data, String initVector, String key) throws InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
 
         IvParameterSpec iv = new IvParameterSpec(initVector.getBytes());
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-        cipher.init(Cipher.ENCRYPT_MODE, skeySpec,iv); // or Cipher.DECRYPT_MODE
+        cipher.init(Cipher.ENCRYPT_MODE, skeySpec, iv); // or Cipher.DECRYPT_MODE
 
         byte[] encrypted = cipher.doFinal(data.getBytes());
 
@@ -51,8 +52,7 @@ public class Response implements Serializable {
     }
 
 
-
-    private String decrypt(String data,String initVector,String key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    private String decrypt(String data, String initVector, String key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
         byte[] encrypted = Base64.getDecoder().decode(data);
 
@@ -60,7 +60,7 @@ public class Response implements Serializable {
         SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-        cipher.init(Cipher.DECRYPT_MODE, skeySpec,iv);
+        cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv);
 
         byte[] decrypted = cipher.doFinal(encrypted);
 
@@ -68,27 +68,27 @@ public class Response implements Serializable {
 
         return s;
     }
-    public void siphor(String initVector,String key){
+
+    public void siphor(String initVector, String key) {
         try {
-            this.Message = encrypt(this.Message,initVector,key);
-            this.Text = encrypt(this.Text,initVector,key);
-        } catch (Exception e){
+            this.Message = encrypt(this.Message, initVector, key);
+            this.Text = encrypt(this.Text, initVector, key);
+        } catch (Exception e) {
             System.out.println(e);
         }
     }
-    public void unSiphor(String initVector,String key)
-    {
-        try
-        {
-            this.Message = decrypt(this.Message,initVector,key);
-            this.Text = decrypt(this.Text,initVector,key);
-        }
-        catch (Exception e) {
+
+    public void unSiphor(String initVector, String key) {
+        try {
+            this.Message = decrypt(this.Message, initVector, key);
+            this.Text = decrypt(this.Text, initVector, key);
+        } catch (Exception e) {
             System.out.println(e);
         }
     }
+
     @Override
-    public String toString(){
-        return this.Message+"\n"+this.Text;
+    public String toString() {
+        return this.Message + "\n" + this.Text;
     }
 }
